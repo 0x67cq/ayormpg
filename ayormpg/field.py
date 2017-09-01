@@ -18,12 +18,14 @@ class Field(object):
             column_type,
             primary_key,
             foreign_key,
+            union,
             not_null,
             default):
         self.name = name
         self.column_type = column_type
         self.primary_key = primary_key
         self.foreign_key = foreign_key
+        self.union = union
         self.not_null = not_null
         self.default = default
 
@@ -38,6 +40,7 @@ class IntegerField(Field):
             name=None,
             primary_key=False,
             foreign_key=None,
+            union = False,
             column_type='bigint',
             not_null=False,
             default=0):
@@ -48,6 +51,7 @@ class IntegerField(Field):
             column_type,
             primary_key,
             foreign_key,
+            union,
             not_null,
             default)
 
@@ -57,7 +61,8 @@ class FloatField(Field):
             self,
             name=None,
             primary_key=False,
-            foreign_key=False,
+            foreign_key=None,
+            union = False,
             column_type='double',
             not_null=False,
             default=0.0):
@@ -68,6 +73,7 @@ class FloatField(Field):
             column_type,
             primary_key,
             foreign_key,
+            union,
             not_null,
             default)
 
@@ -77,7 +83,8 @@ class StringField(Field):
             self,
             name=None,
             primary_key=False,
-            foreign_key=False,
+            foreign_key=None,
+            union = False,
             column_type='varchar(50)',
             not_null=False,
             default=''):
@@ -88,6 +95,7 @@ class StringField(Field):
             column_type,
             primary_key,
             foreign_key,
+            union,
             not_null,
             default)
 
@@ -97,7 +105,8 @@ class TextField(Field):
             self,
             name=None,
             primary_key=False,
-            foreign_key=False,
+            foreign_key=None,
+            union = False,
             column_type='text',
             not_null=False,
             default=''):
@@ -108,6 +117,7 @@ class TextField(Field):
             column_type,
             primary_key,
             foreign_key,
+            union,
             not_null,
             default)
 
@@ -116,8 +126,9 @@ class BooleanField(Field):
     def __init__(
             self,
             name=None,
-            primary_key=None,
-            foreign_key=False,
+            primary_key = False,
+            foreign_key=None,
+            union = False,
             column_type='boolean',
             not_null=False,
             default=False):
@@ -128,6 +139,7 @@ class BooleanField(Field):
             column_type,
             primary_key,
             foreign_key,
+            union,
             not_null,
             default)
 
@@ -136,8 +148,9 @@ class DateTimeField(Field):
     def __init__(
             self,
             name=None,
-            primary_key=None,
-            foreign_key=False,
+            primary_key=False,
+            foreign_key=None,
+            union = False,
             column_type='timestamp',
             not_null=False,
             default='2017-08-29'):
@@ -148,6 +161,7 @@ class DateTimeField(Field):
             column_type,
             primary_key,
             foreign_key,
+            union,
             not_null,
             default)
 

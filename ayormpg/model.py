@@ -1,8 +1,10 @@
-from field import Field, IntegerField, FloatField, StringField, TextField, BooleanField, DateTimeField
-import asyncpg
 import asyncio
 import datetime
 import logging
+
+import asyncpg
+
+from ayormpg.field import Field, IntegerField, StringField, DateTimeField
 
 logger = logging.getLogger('asyncio')
 
@@ -101,6 +103,8 @@ class ModelMetaclass(type):
         primary_key = None
         foreign_key = {}
         foreign_key_not_null = []
+        serial = []
+        unions = []
         if 'pk' in attrs.keys():
             primary_key = True
             attrs['__primary_key__'] = list(attrs['pk'].li)
@@ -108,6 +112,8 @@ class ModelMetaclass(type):
             for k, v in attrs.items():
                 if isinstance(v, Field):
                     maps[k] = v
+                    if 'serial' == v.column_type:
+                        serial.append(k)
                     if v.primary_key:
                         if primary_key:
                             raise RuntimeError('Overflow Num of Primary Key')
@@ -116,6 +122,8 @@ class ModelMetaclass(type):
                         fields.append(k)
                     if not primary_key:
                         raise RuntimeError('Primary Key Not Found')
+                    if v.union:
+                        unions.append(k)
                     if v.not_null:
                         not_null.append(k)
                     else:
@@ -141,9 +149,9 @@ class ModelMetaclass(type):
         tmp_allow_null = []
         for i in allow_null:
             tmp_allow_null.append(i + ' ' + maps[i].column_type)
-
         not_null = list(map(lambda f: '`%s`' % f, not_null))
         except_pk_fields = list(map(lambda f: '%s' % f, fields))
+        attrs['__serial__'] = serial
         attrs['__foreign_key__'] = foreign_key
         attrs['__not_null__'] = not_null
         attrs['__maps__'] = maps
@@ -152,17 +160,49 @@ class ModelMetaclass(type):
         attrs['__fields__'] = fields
         attrs['__select__'] = 'select %s, %s from %s' % (
             primary_key, ', '.join(except_pk_fields), table_name)
-        attrs['__insert__'] = 'insert into %s (%s,%s) values (%s)' % (
-            table_name, primary_key, ', '.join(except_pk_fields),
-            create_args_string(len(except_pk_fields) + 1))
+        attrs['__insert__'] = 'insert into %s (%s) values (%s)' % (
+            table_name, create_insert_key(primary_key,serial,except_pk_fields) ,
+            create_args_string(len(except_pk_fields)-(len(serial))+1))
         attrs['__update__'] = 'update %s set ' % (table_name,)
         attrs['__delete__'] = 'delete from %s where ?' % (table_name)
-        attrs['__create__'] = 'CREATE TABLE %s (%s %s PRIMARY KEY %s%s%s)' % (
+        attrs['__create__'] = 'CREATE TABLE %s (%s %s PRIMARY KEY %s%s%s%s)' % (
             table_name, primary_key, maps[primary_key].column_type,
             create_not_null(tmp_not_null), create_alow_null(tmp_allow_null),
-            create_foreign_key_not_null(foreign_key,foreign_key_not_null,maps)
+            create_foreign_key_not_null(foreign_key,foreign_key_not_null,maps),
+            create_union(unions)
         )
         return super(ModelMetaclass, cls).__new__(cls, name, bases, attrs)
+
+def create_insert_key(primary_key,serial,except_pk_fields):
+    """
+
+    Args:
+        primary_key(str):
+        serial(list):
+        except_pk_fields(list):
+
+    Returns:
+
+    """
+    if not serial:
+        lin = primary_key + ','+ ', '.join(except_pk_fields)
+        return lin
+    else:
+        except_pk_fields.insert(0,str(primary_key))
+        for i in serial:
+            except_pk_fields.remove(i)
+        return ', '.join(except_pk_fields)
+
+def create_union(unions):
+    """
+    Args:
+        unions(list):
+    Returns:
+    """
+    if unions:
+        return ', Unique({})'.format(' '.join(unions))
+    else:
+        return ''
 
 def create_foreign_key_not_null(foreign_key,foreign_key_not_null,maps):
     """
@@ -284,6 +324,8 @@ class Model(dict, metaclass=ModelMetaclass):
         """
         value = getattr(self, key, None)
         if value is None:
+            if key in self.__serial__:
+                return ''
             field = self.__maps__[key]
             if field.default is not None:
                 value = field.default() if callable(field.default) else field.default
@@ -429,7 +471,9 @@ class Model(dict, metaclass=ModelMetaclass):
         """
         args = list(map(self.__get_value_or_default, self.__fields__))
         args.insert(0, self.__get_value_or_default(self.__primary_key__))
-        # print(self.__insert__,args)
+        args.insert(0,'')
+        args.insert(3,'')
+        args =  [i for i in args if i != '']
         tmp = ''.join(str(args))
         log('commit ' + self.__insert__ + tmp)
         rows = await execute(self.__insert__, *args)
