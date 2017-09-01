@@ -1,9 +1,8 @@
 import asyncio
 import datetime
 import logging
-
 import asyncpg
-
+from ayormpg.decorators import checkparam
 from ayormpg.field import Field, IntegerField, StringField, DateTimeField
 
 logger = logging.getLogger('asyncio')
@@ -47,7 +46,7 @@ async def close_connection():
 
 
 
-
+@checkparam
 async def select(sql, *args):
     """
     asyncpg查询接口封装
@@ -65,7 +64,7 @@ async def select(sql, *args):
 
 
 
-
+@checkparam
 async def execute(sql, *args):
     """
     asyncpg执行接口封装

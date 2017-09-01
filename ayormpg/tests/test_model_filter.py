@@ -57,6 +57,7 @@ class TestModel(unittest.TestCase):
         async def main():
             print(await Child.filter(id=5))
             print(await Child.filter(age=12))
+            print(await Child.filter(name="xkUb'"))
         asyncio.get_event_loop().run_until_complete(main())
 
     def tearDown(self):
